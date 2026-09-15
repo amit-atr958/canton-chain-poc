@@ -495,7 +495,7 @@ Create `daml/src/TransferTest.daml`:
 ```daml
 module TransferTest where
 
-import DA.Time (seconds, hours)
+import DA.Time (seconds, hours, addRelTime)
 import Daml.Script
 import Splice.Api.Token.HoldingV1 (InstrumentId(..), Holding)
 import Splice.Api.Token.MetadataV1 (ChoiceContext(..), ExtraArgs(..), emptyMetadata)
@@ -539,8 +539,8 @@ test_transfer_between_allowlisted_parties = do
         receiver = bob
         amount = 40.0
         instrumentId = InstrumentId with admin = issuer, id = "POC"
-        requestedAt = subTime now (seconds 1)
-        executeBefore = addTime now (hours 1)
+        requestedAt = addRelTime now (negate (seconds 1))
+        executeBefore = addRelTime now (hours 1)
         inputHoldingCids = [toInterfaceContractId @Holding holdingCid]
         meta = emptyMetadata
       extraArgs = ExtraArgs with context = ChoiceContext with values = mempty; meta = emptyMetadata
@@ -581,8 +581,8 @@ test_transfer_to_non_allowlisted_party_fails = do
         receiver = eve
         amount = 40.0
         instrumentId = InstrumentId with admin = issuer, id = "POC"
-        requestedAt = subTime now (seconds 1)
-        executeBefore = addTime now (hours 1)
+        requestedAt = addRelTime now (negate (seconds 1))
+        executeBefore = addRelTime now (hours 1)
         inputHoldingCids = [toInterfaceContractId @Holding holdingCid]
         meta = emptyMetadata
       extraArgs = ExtraArgs with context = ChoiceContext with values = mempty; meta = emptyMetadata
@@ -603,8 +603,8 @@ test_transfer_over_balance_fails = do
         receiver = bob
         amount = 1000.0
         instrumentId = InstrumentId with admin = issuer, id = "POC"
-        requestedAt = subTime now (seconds 1)
-        executeBefore = addTime now (hours 1)
+        requestedAt = addRelTime now (negate (seconds 1))
+        executeBefore = addRelTime now (hours 1)
         inputHoldingCids = [toInterfaceContractId @Holding holdingCid]
         meta = emptyMetadata
       extraArgs = ExtraArgs with context = ChoiceContext with values = mempty; meta = emptyMetadata
