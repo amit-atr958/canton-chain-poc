@@ -762,7 +762,7 @@ Create `scripts/bootstrap/package.json`:
     "bootstrap": "tsx src/bootstrap.ts"
   },
   "dependencies": {
-    "@canton-network/wallet-sdk": "^0.5.0"
+    "@canton-network/wallet-sdk": "^1.5.1"
   },
   "devDependencies": {
     "tsx": "^4.19.0",
