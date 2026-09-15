@@ -1,0 +1,48 @@
+module Token where
+
+import Splice.Api.Token.MetadataV1 (emptyMetadata, Metadata)
+import Splice.Api.Token.HoldingV1 (Holding(..), HoldingView(..), InstrumentId, Lock)
+
+import Compliance (IdentityRegistry, assertAllowlisted)
+
+-- | A single owned position of the PoC token. Implements the Splice
+-- Holding interface so any CIP-0056-aware wallet recognizes it.
+template TokenHolding
+  with
+    issuer       : Party
+    owner        : Party
+    amount       : Decimal
+    instrumentId : InstrumentId
+    lock         : Optional Lock
+    meta         : Metadata
+  where
+    signatory issuer
+    observer owner
+
+    interface instance Holding for TokenHolding where
+      view = HoldingView with owner, instrumentId, amount, lock, meta
+
+-- | Issuer-controlled minting authority for one instrument.
+template TokenIssuer
+  with
+    issuer       : Party
+    instrumentId : InstrumentId
+  where
+    signatory issuer
+
+    nonconsuming choice Issue : ContractId TokenHolding
+      with
+        to                  : Party
+        amount              : Decimal
+        identityRegistryCid : ContractId IdentityRegistry
+      controller issuer
+      do
+        assertMsg "amount must be positive" (amount > 0.0)
+        assertAllowlisted identityRegistryCid issuer to
+        create TokenHolding with
+          issuer
+          owner = to
+          amount
+          instrumentId
+          lock = None
+          meta = emptyMetadata
