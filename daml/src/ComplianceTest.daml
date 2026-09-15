@@ -1,0 +1,30 @@
+module ComplianceTest where
+
+import Daml.Script
+import Compliance
+
+test_allow_and_check : Script ()
+test_allow_and_check = do
+  admin <- allocateParty "admin"
+  alice <- allocateParty "alice"
+  bob <- allocateParty "bob"
+
+  registryCid <- submit admin do
+    createCmd IdentityRegistry with admin, allowlist = [alice]
+
+  -- alice is allowlisted, bob is not
+  _ <- submit admin do
+    exerciseCmd registryCid (IdentityRegistry_Allow with party = bob)
+
+  pure ()
+
+test_reject_duplicate_allow : Script ()
+test_reject_duplicate_allow = do
+  admin <- allocateParty "admin"
+  alice <- allocateParty "alice"
+
+  registryCid <- submit admin do
+    createCmd IdentityRegistry with admin, allowlist = [alice]
+
+  submitMustFail admin do
+    exerciseCmd registryCid (IdentityRegistry_Allow with party = alice)
