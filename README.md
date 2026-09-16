@@ -5,36 +5,55 @@ token minting, and token transfer, with an ERC-3643-style compliance
 allowlist layered on Canton's native CIP-0056 token standard.
 
 See `docs/superpowers/specs/2026-09-15-canton-token-poc-design.md` for the
-design and its scope trade-offs, and
+design and its scope trade-offs,
 `docs/superpowers/specs/2026-09-16-no-docker-hosted-sandbox-research.md` for
 why this runs against a local Splice LocalNet (Docker) rather than a hosted
 Canton sandbox — no such sandbox exists today that a Node/React-only
-developer can reach without running their own validator node.
+developer can reach without running their own validator node — and
+[`PRODUCTION.md`](PRODUCTION.md) for what changes to take this past a PoC:
+network progression (DevNet/TestNet/MainNet), contract/package deployment
+and upgrades, key management, and operations.
 
 ## Quick setup
 
-`./install.sh` automates everything in **Prerequisites** and **Setup**
-below: it installs Docker (Linux, via Docker's official script — macOS/
-Windows still need Docker Desktop installed manually first), `dpm`, and
-Node 22 (via `nvm`, without touching your system Node) if any are missing;
-clones `cn-quickstart` and applies both required nginx patches; starts
-LocalNet and waits for it to come up; vendors the token-standard DARs;
-builds and tests the Daml package; and bootstraps LocalNet. It's safe to
-re-run — every step checks whether it's already done first. It stops short
-of running the frontend (the two steps it prints at the end: copy
-`poc-config.json` into `pocConfig.ts`, then `npm run dev`) since those are
-one-time/manual by design (see Setup step 5 and the Walkthrough below).
+- **`./install.sh`** — one-time setup. Installs Docker (Linux, via Docker's
+  official script — macOS/Windows still need Docker Desktop installed
+  manually first), `dpm`, and Node 22 (via `nvm`, without touching your
+  system Node) if any are missing; clones `cn-quickstart` and applies both
+  required nginx patches; starts LocalNet and waits for it to come up;
+  vendors the token-standard DARs; builds and tests the Daml package; and
+  bootstraps LocalNet (creates the admin party and contracts). Safe to
+  re-run — every step checks whether it's already done first. Stops short
+  of running the frontend (the two steps it prints at the end: copy
+  `poc-config.json` into `pocConfig.ts`, then start the frontend) since
+  those are one-time/manual by design (see Setup step 5 and the Walkthrough
+  below).
+- **`./start.sh`** — every subsequent dev session. Brings up LocalNet if it
+  isn't already running, then starts the frontend dev server in the
+  foreground (Ctrl+C stops it; LocalNet keeps running in Docker). Requires
+  `./install.sh` to have been run at least once.
+- **`./stop.sh`** — stops LocalNet's Docker containers (keeps volumes, so
+  the bootstrapped admin party/contracts survive; `./start.sh` picks up
+  where you left off).
 
 Read on for what `install.sh` does and why, one step at a time — useful if
 it fails partway through, or if you'd rather run the steps yourself.
 
 ## Prerequisites
 
-- **Docker** (for Splice LocalNet)
+Verified on Ubuntu 22.04 (x86_64); `install.sh` also targets other Linux
+distros via Docker's official installer, but hasn't been tested there.
+macOS/Windows need Docker Desktop installed manually (`install.sh` doesn't
+attempt to install Docker on those).
+
+- **Docker** (28.1.1 verified; any reasonably recent version with Compose
+  v2 — `docker compose`, not the standalone `docker-compose` — should work)
+  for Splice LocalNet.
 - **`dpm`** (Daml package manager / SDK installer) — install via
   `curl -sSL https://get.digitalasset.com/install/install.sh | sh` (the
   legacy `get.daml.com` installer does not provide `dpm` and cannot fetch
-  SDK 3.5.2)
+  SDK 3.5.2). This project pins Daml SDK 3.5.2, installed automatically by
+  `dpm install` the first time you `dpm build` (see `daml/daml.yaml`).
 - **Node.js 22+** — not 18+. `@canton-network/wallet-sdk`'s ACS reader
   (`@canton-network/core-acs-reader`) calls the native ES2024
   `Set.prototype.union`, unavailable before Node 22 (V8 12.4). Node 18/20
@@ -43,6 +62,18 @@ it fails partway through, or if you'd rather run the steps yourself.
   If you can't upgrade your system Node, install a project-local one with
   [nvm](https://github.com/nvm-sh/nvm) (`nvm install 22 && nvm use 22`) — no
   need to touch a system Node other things on your machine depend on.
+- **`git`, `curl`, `unzip`** — `unzip` specifically because
+  `scripts/bootstrap/src/bootstrap.ts` reads the built DAR's own manifest
+  with it (see that file's comments).
+- **Hardware:** LocalNet runs 11 containers (participant, synchronizer,
+  Splice validator, Postgres, nginx, and several web UIs). Verified running
+  comfortably on 4 CPU cores / 8GB RAM / a few GB of free disk for the
+  Docker images — this is a real, not-cut-down multi-service stack, not a
+  lightweight mock, so treat 8GB RAM as a practical floor, not a nice-to-have,
+  especially if anything else is running on the same machine.
+- **Network:** everything runs locally — no outbound access needed once
+  Docker images, the Daml SDK, and npm packages are downloaded (all one-time,
+  during `install.sh`).
 
 ## Setup
 
@@ -82,7 +113,9 @@ it fails partway through, or if you'd rather run the steps yourself.
    rather than fetching it, per the design's no-registry-service scope
    decision.
 6. **Run the frontend:** `cd frontend && npm install && npm run dev`, then
-   open the printed local URL (typically `http://localhost:5173`).
+   open the printed local URL (typically `http://localhost:5173`). Steps 1
+   and 6 together are what `./start.sh` automates for every session after
+   this first-time setup — see Quick setup above.
 
    If LocalNet isn't reachable at `json-ledger-api.localhost:2000` from
    wherever the browser runs (e.g. LocalNet is on a different machine,
@@ -163,7 +196,9 @@ current `scripts/bootstrap/output/poc-config.json` (bootstrap) or the
 Found during the final whole-branch review (see the SDD ledger for full
 detail) — none of these block the PoC's three stated capabilities, all of
 which are implemented and live-verified, but they're the first things to
-address before extending this past PoC scope:
+address before extending this past PoC scope. See [`PRODUCTION.md`](PRODUCTION.md)
+for the fuller production-readiness treatment of these and other gaps
+(key management, the registry service, network access, operations):
 
 - **Compliance checks the receiver only, never the sender.**
   `Transfer.daml`'s `TransferFactory_Transfer` asserts the *receiver* is
