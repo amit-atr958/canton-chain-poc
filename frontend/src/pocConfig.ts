@@ -8,7 +8,7 @@ export const POC_CONFIG = {
     adminPublicKey: 'PtnH9KfM9n2GTW5pvLfy0lbScvqluCbiGZqTiFbuI+M=',
     adminPrivateKey: 'vzbWSyCTXbwnZns+BGjU+SDSfWwr50xrfhMfnx7G+As+2cf0p8z2fYZNbmm8t/LSVtJy+qW4JuIZmpOIVu4j4w==',
     instrumentId: { admin: 'poc-admin::1220ec30ca193dafdaa1d10a440c32f357d1ceccec38d0d7591be5e60fbd58ef2e4a', id: 'POC' },
-    identityRegistryCid: '00536216b8895862ddde73f7b5d50858355a1aa6d5f1e051f263da465b78e1432dca12122063bacca88ad5dbe3d26ada3be2e410a1416f163ad2be7d713be0ab3f3a96be3d',
+    identityRegistryCid: '006f817d97547c53b6dffeb286191e58e0d4892aea1e8589368e28054b89daa4a0ca121220fb003ac8ae4ef761c9409da64a5c1bc3dcb83449db089e7ff1c1c8f3f28fb4cd',
     issuerCid: '001670517e35a052377016eebaac14e3fe2d62a73608ff8e61e616bd9e9d4ccccdca121220d4011d1244e570ae37a0bc70f1a95c7c2bddcc470c3b8bb40dc53ce42e32be2a',
-    transferFactoryCid: '00199c0f96458418170e617e7035fb4b936d8cdf589ed466b7e28bf1f86fd8b59fca121220bfda04687e2205cf57edb837481a34c8a16763f2341a2cdbba807e74702a73e0',
+    transferFactoryCid: '00cf40cd5a6fb585c2af259827b7b9e6befb3b68bf107f6a15650b972066885586ca1212204f156675f3d2304893dc66d838f2ec044481730d28c976b9f7e9a5ab4da56394',
 } as const
