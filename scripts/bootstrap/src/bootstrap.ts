@@ -7,7 +7,10 @@ import { AUTH_CONFIG, LEDGER_URL } from './config.js'
 
 // Extracted via `dpm damlc inspect-dar daml/.daml/dist/canton-token-poc-1.0.0.dar`
 // (Step 2 of the task brief) — the main package id of the canton-token-poc DAR.
-const PACKAGE_ID = '66950e160a445d00a4c1cd66c40474803549037f9c8e9d09784289b8de225ad5'
+// Changed after daml/vendor/*.dar was replaced with LocalNet's own bundled
+// copies of the token-standard dependency packages (see Task 9 investigation
+// in the SDD ledger) -- rebuilding against them changes our own package hash.
+const PACKAGE_ID = 'a5b380b6ad7836ef07dc9eff7c22cdf56ece19c3154909b3957d79bb0642c1ad'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const DAR_PATH = path.join(here, '../../../daml/.daml/dist/canton-token-poc-1.0.0.dar')
 const OUTPUT_PATH = path.join(here, '../output/poc-config.json')

@@ -10,19 +10,23 @@ type Props = {
     onTransferred: () => void
 }
 
-// Our own uploaded DAR vendors its own copy of the
-// splice-api-token-transfer-instruction-v1 package. LocalNet also ships its
-// own built-in copy of a package with the exact same name
-// (splice-api-token-transfer-instruction-v1), under a *different*
-// package-id, as part of its own Splice/token-standard installation. A
-// name-based templateId reference (`#splice-api-token-transfer-instruction-v1:...`)
-// resolves to whichever package is vetted under that name, which is
-// LocalNet's built-in one -- not ours -- and our TokenTransferFactory's
-// interface instance only implements our own vendored copy. So we must
-// reference our copy by its exact package-id (extracted via
-// `dpm damlc inspect-dar` on our built DAR) instead of by name.
+// Our DAR's data-dependencies (daml/vendor/*.dar) are LocalNet's OWN bundled
+// copies of the Splice token-standard packages (extracted from the `splice`
+// container's /app/splice-node/dars/ and vendored verbatim -- see
+// scripts/vendor-token-standard.sh and the Task 9 investigation in the SDD
+// ledger), not separately-fetched copies. This means our
+// splice-api-token-transfer-instruction-v1 dependency has the EXACT SAME
+// package-id LocalNet already vets natively, so the plain name-based
+// templateId resolves correctly with no ambiguity -- exactly what a real
+// CIP-0056-aware wallet would use, with no hardcoded package-id needed.
+// (An earlier attempt vendored a separately-fetched copy of this package,
+// which got a different hash than LocalNet's -- Canton refuses to vet two
+// packages under the same name+version, so that copy could never be vetted,
+// and every TransferFactory_Transfer exercise failed with
+// UNRESOLVED_PACKAGE_NAME during interpretation. Re-vendoring LocalNet's own
+// copy fixed it.)
 const TRANSFER_FACTORY_INTERFACE_TEMPLATE_ID =
-    'b665908a9e885680fa4126b5644197547417e5f29e85bff162c26e4e6e67d0a8:Splice.Api.Token.TransferInstructionV1:TransferFactory'
+    '#splice-api-token-transfer-instruction-v1:Splice.Api.Token.TransferInstructionV1:TransferFactory'
 
 export function TransferToken({ sender, receiver, onTransferred }: Props) {
     const [amount, setAmount] = useState('40')

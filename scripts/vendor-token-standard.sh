@@ -4,42 +4,39 @@ set -euo pipefail
 # Vendors the Splice token-standard v1 DARs (metadata, holding,
 # transfer-instruction) that daml/daml.yaml's data-dependencies reference.
 #
-# There is no published release/download URL for these DARs, so they are
-# built from source by cloning canton-network/splice and running `dpm build`
-# in each package directory, in dependency order (metadata -> holding ->
-# transfer-instruction).
+# These are extracted directly from a RUNNING LocalNet's `splice` container
+# (/app/splice-node/dars/), not built from source. LocalNet's Canton
+# participant auto-vets its own bundled copies of these packages on startup
+# (they ship with the Splice validator image, pinned to LocalNet's
+# SPLICE_VERSION). A separately-built copy of the *same* package name+version
+# -- e.g. built from canton-network/splice's `main` branch, as an earlier
+# version of this script did -- gets a *different* content hash (different
+# source ref, compiler version, build timestamp), and Canton refuses to vet
+# two different packages under the same (name, version): the participant
+# already has LocalNet's copy vetted, so ours could never be vetted
+# alongside it. That silently broke `TransferFactory_Transfer` (an interface
+# choice, unlike `Issue`'s direct template choice) with a confusing
+# `UNRESOLVED_PACKAGE_NAME` interpretation error that only showed up against
+# a live ledger -- see the Task 9 investigation in
+# .superpowers/sdd/2026-09-15-canton-token-poc/progress.md for the full
+# debugging trail. Extracting LocalNet's own copies instead guarantees an
+# exact package-id match, so our DAR builds against packages the participant
+# already vets natively.
 #
-# Note: each package's own daml.yaml declares its data-dependencies on the
-# *previous* package's DAR using the filename "<pkg>-current.dar" (this is
-# how the splice monorepo's sbt/daml build tooling names its outputs), but a
-# plain `dpm build` run outside that tooling produces "<pkg>-<version>.dar"
-# (e.g. "<pkg>-1.0.0.dar") instead. After building each dependency package we
-# therefore copy its versioned DAR to the "-current.dar" name the next
-# package's daml.yaml expects, purely as a local build-time shim.
+# Requires: LocalNet already running (see localnet/README.md) -- run this
+# AFTER `docker compose ... up -d`, not before.
 
-SDK_VERSION="3.5.2"
-SPLICE_REF="main"
-WORKDIR=$(mktemp -d)
-trap 'rm -rf "$WORKDIR"' EXIT
-
-# Ensure the SDK version declared by the token-standard packages is
-# available; `dpm build` fails fast with SDK_NOT_INSTALLED otherwise.
-dpm install "$SDK_VERSION"
-
-git clone --depth 1 --branch "$SPLICE_REF" \
-  https://github.com/canton-network/splice.git "$WORKDIR/splice"
-
-TOKEN_STANDARD_DIR="$WORKDIR/splice/token-standard"
 VENDOR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/daml/vendor"
 mkdir -p "$VENDOR_DIR"
 
+if ! docker ps --format '{{.Names}}' | grep -qx splice; then
+  echo "error: the 'splice' LocalNet container is not running -- start LocalNet first (see localnet/README.md)" >&2
+  exit 1
+fi
+
 for pkg in splice-api-token-metadata-v1 splice-api-token-holding-v1 splice-api-token-transfer-instruction-v1; do
-  echo "Building $pkg..."
-  (cd "$TOKEN_STANDARD_DIR/$pkg" && dpm build)
-  DAR="$TOKEN_STANDARD_DIR/$pkg/.daml/dist/${pkg}-1.0.0.dar"
-  cp "$DAR" "$VENDOR_DIR/"
-  # Shim expected by the next package's data-dependencies (see note above).
-  cp "$DAR" "$TOKEN_STANDARD_DIR/$pkg/.daml/dist/${pkg}-current.dar"
+  echo "Extracting ${pkg}-1.0.0.dar from the running LocalNet..."
+  docker cp "splice:/app/splice-node/dars/${pkg}-1.0.0.dar" "$VENDOR_DIR/"
 done
 
 echo "Vendored DARs into $VENDOR_DIR:"

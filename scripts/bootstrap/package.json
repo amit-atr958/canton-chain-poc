@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "bootstrap": "tsx src/bootstrap.ts",
-    "allow": "tsx src/allow-party.ts"
+    "allow": "tsx src/allow-party.ts",
+    "recreate-transfer-factory": "tsx src/recreate-transfer-factory.ts"
   },
   "dependencies": {
     "@canton-network/wallet-sdk": "^1.5.1",
