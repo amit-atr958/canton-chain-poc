@@ -52,10 +52,9 @@ async function main() {
         parties: [config.adminPartyId],
         filterByParty: true,
     })
-    const fresh = factoryContracts.find(
-        (c: { createArgument?: { identityRegistryCid?: string } }) =>
-            c.createArgument?.identityRegistryCid === currentRegistryCid
-    )
+    const fresh = (
+        factoryContracts as Array<{ contractId: string; createArgument?: { identityRegistryCid?: string } }>
+    ).find((c) => c.createArgument?.identityRegistryCid === currentRegistryCid)
     if (!fresh) throw new Error('Could not find freshly created TokenTransferFactory with the current registryCid')
     console.log('New TokenTransferFactory cid:', fresh.contractId)
 

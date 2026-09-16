@@ -59,14 +59,14 @@ export function TransferToken({ sender, receiver, onTransferred }: Props) {
                 filterByParty: true,
             })
 
-            // Uncomment to verify the live response shape against a running
-            // LocalNet instance -- see task-9-report.md for why this is still
-            // unverified in this environment:
-            // console.log('factoryContracts raw result', JSON.stringify(factoryContracts))
-
-            const factoryContract = (factoryContracts as any[]).find(
-                (c) => c.contractId === POC_CONFIG.transferFactoryCid
-            )
+            const factoryContract = (
+                factoryContracts as Array<{
+                    contractId: string
+                    templateId: string
+                    createdEventBlob?: string
+                    synchronizerId?: string
+                }>
+            ).find((c) => c.contractId === POC_CONFIG.transferFactoryCid)
             if (!factoryContract) {
                 throw new Error('TokenTransferFactory contract not found in admin ACS query')
             }
