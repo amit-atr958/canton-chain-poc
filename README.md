@@ -11,6 +11,23 @@ why this runs against a local Splice LocalNet (Docker) rather than a hosted
 Canton sandbox — no such sandbox exists today that a Node/React-only
 developer can reach without running their own validator node.
 
+## Quick setup
+
+`./install.sh` automates everything in **Prerequisites** and **Setup**
+below: it installs Docker (Linux, via Docker's official script — macOS/
+Windows still need Docker Desktop installed manually first), `dpm`, and
+Node 22 (via `nvm`, without touching your system Node) if any are missing;
+clones `cn-quickstart` and applies both required nginx patches; starts
+LocalNet and waits for it to come up; vendors the token-standard DARs;
+builds and tests the Daml package; and bootstraps LocalNet. It's safe to
+re-run — every step checks whether it's already done first. It stops short
+of running the frontend (the two steps it prints at the end: copy
+`poc-config.json` into `pocConfig.ts`, then `npm run dev`) since those are
+one-time/manual by design (see Setup step 5 and the Walkthrough below).
+
+Read on for what `install.sh` does and why, one step at a time — useful if
+it fails partway through, or if you'd rather run the steps yourself.
+
 ## Prerequisites
 
 - **Docker** (for Splice LocalNet)
