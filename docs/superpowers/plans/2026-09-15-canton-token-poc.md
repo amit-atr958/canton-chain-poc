@@ -10,6 +10,13 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-15-canton-token-poc-design.md`
 
+**Note (2026-09-16):** a no-Docker, hosted-sandbox path was researched and found not
+viable as of this date — every hosted Canton environment (DevNet/TestNet/MainNet)
+requires running your own SV-sponsored validator node, which is heavier than LocalNet,
+not lighter. See `docs/superpowers/specs/2026-09-16-no-docker-hosted-sandbox-research.md`.
+Docker (LocalNet) and a one-time local Daml SDK install remain required; this plan is
+unchanged.
+
 ## Global Constraints
 
 - Daml SDK version: `3.5.2`, `build-options: [--target=2.1]` (matches the Splice token-standard packages this project depends on — a mismatched LF target will fail to link).
