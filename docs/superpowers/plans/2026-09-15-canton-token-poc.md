@@ -6,7 +6,7 @@
 
 **Architecture:** A Daml package implements the `Holding` and `TransferFactory` interfaces from Canton's Splice token-standard, gated by a custom `IdentityRegistry` allowlist template. A React/TypeScript frontend uses `@canton-network/wallet-sdk` directly in-browser (no backend) against a standalone Splice LocalNet instance to connect wallets, mint, and transfer.
 
-**Tech Stack:** Daml 3.5.2 (LF target 2.1), `@canton-network/wallet-sdk`, React + TypeScript + Vite, Splice LocalNet (Docker Compose), Node.js 18+.
+**Tech Stack:** Daml 3.5.2 (LF target 2.1), `@canton-network/wallet-sdk`, React + TypeScript + Vite, Splice LocalNet (Docker Compose), Node.js **22+** (not 18+ — `@canton-network/core-acs-reader`'s ACS cache calls the native ES2024 `Set.prototype.union`, unavailable before Node 22; see `localnet/README.md`).
 
 **Spec:** `docs/superpowers/specs/2026-09-15-canton-token-poc-design.md`
 
@@ -166,6 +166,18 @@ git commit -m "Scaffold Daml project and standalone LocalNet setup"
 ---
 
 ### Task 2: Vendor the Splice token-standard DAR dependencies
+
+> **SUPERSEDED (2026-09-16):** the from-source vendoring approach below
+> (`git clone canton-network/splice && dpm build`) is what caused the Task 9
+> `UNRESOLVED_PACKAGE_NAME` blocker — a from-source build gets a different
+> content hash than LocalNet's own bundled copy of the same package
+> name+version, and Canton refuses to vet two different packages under the
+> same (name, version). The actual, correct `scripts/vendor-token-standard.sh`
+> extracts LocalNet's own bundled DARs from the running `splice` container
+> instead — see the file itself and the Task 9 investigation in
+> `.superpowers/sdd/2026-09-15-canton-token-poc/progress.md` for the full
+> root-cause writeup. The steps below are kept for history; do not follow
+> them literally.
 
 **Files:**
 - Create: `daml/vendor/splice-api-token-metadata-v1-1.0.0.dar` (built artifact)
@@ -487,6 +499,13 @@ git commit -m "Add TokenHolding (Splice Holding interface) and Issue/mint"
 
 ### Task 5: Transfer module — TransferFactory (one-step transfer)
 
+> **Note (2026-09-16):** the test snippet below doesn't include the
+> `readAs [issuer]` fix the actual `TransferTest.daml` needed —
+> `TokenTransferFactory` has no observer, so a non-stakeholder sender can't
+> even see it in a Daml Script `submit` without `actAs ... <> readAs [...]`.
+> See the SDD ledger's Task 5 entry for why, and the committed test file for
+> the actual fix.
+
 **Files:**
 - Create: `daml/src/Transfer.daml`
 - Test: `daml/src/TransferTest.daml`
@@ -502,7 +521,7 @@ Create `daml/src/TransferTest.daml`:
 ```daml
 module TransferTest where
 
-import DA.Time (seconds, hours)
+import DA.Time (seconds, hours, addRelTime)
 import Daml.Script
 import Splice.Api.Token.HoldingV1 (InstrumentId(..), Holding)
 import Splice.Api.Token.MetadataV1 (ChoiceContext(..), ExtraArgs(..), emptyMetadata)
@@ -546,8 +565,8 @@ test_transfer_between_allowlisted_parties = do
         receiver = bob
         amount = 40.0
         instrumentId = InstrumentId with admin = issuer, id = "POC"
-        requestedAt = subTime now (seconds 1)
-        executeBefore = addTime now (hours 1)
+        requestedAt = addRelTime now (negate (seconds 1))
+        executeBefore = addRelTime now (hours 1)
         inputHoldingCids = [toInterfaceContractId @Holding holdingCid]
         meta = emptyMetadata
       extraArgs = ExtraArgs with context = ChoiceContext with values = mempty; meta = emptyMetadata
@@ -588,8 +607,8 @@ test_transfer_to_non_allowlisted_party_fails = do
         receiver = eve
         amount = 40.0
         instrumentId = InstrumentId with admin = issuer, id = "POC"
-        requestedAt = subTime now (seconds 1)
-        executeBefore = addTime now (hours 1)
+        requestedAt = addRelTime now (negate (seconds 1))
+        executeBefore = addRelTime now (hours 1)
         inputHoldingCids = [toInterfaceContractId @Holding holdingCid]
         meta = emptyMetadata
       extraArgs = ExtraArgs with context = ChoiceContext with values = mempty; meta = emptyMetadata
@@ -610,8 +629,8 @@ test_transfer_over_balance_fails = do
         receiver = bob
         amount = 1000.0
         instrumentId = InstrumentId with admin = issuer, id = "POC"
-        requestedAt = subTime now (seconds 1)
-        executeBefore = addTime now (hours 1)
+        requestedAt = addRelTime now (negate (seconds 1))
+        executeBefore = addRelTime now (hours 1)
         inputHoldingCids = [toInterfaceContractId @Holding holdingCid]
         meta = emptyMetadata
       extraArgs = ExtraArgs with context = ChoiceContext with values = mempty; meta = emptyMetadata
@@ -769,7 +788,7 @@ Create `scripts/bootstrap/package.json`:
     "bootstrap": "tsx src/bootstrap.ts"
   },
   "dependencies": {
-    "@canton-network/wallet-sdk": "^0.5.0"
+    "@canton-network/wallet-sdk": "^1.5.1"
   },
   "devDependencies": {
     "tsx": "^4.19.0",
@@ -1381,6 +1400,16 @@ git commit -m "Add mint view and holdings display"
 ---
 
 ### Task 9: Transfer Token view (including compliance rejection demo)
+
+> **Note (2026-09-16):** the sample below has `disclosedContracts: []`, but
+> the real `TransferToken.tsx` must explicitly disclose the
+> `TokenTransferFactory` contract (admin-queried `createdEventBlob`) since
+> the sender isn't a stakeholder of it — see the committed file's comments.
+> It also doesn't mention `scripts/bootstrap/src/allow-party.ts` (allowlist
+> a freshly connected wallet) or `recreate-transfer-factory.ts` (needed
+> after any `Allow`/`Revoke`, since `TokenTransferFactory.identityRegistryCid`
+> is a create-time-only field) — both exist and are documented in the root
+> `README.md`'s Walkthrough section.
 
 **Files:**
 - Create: `frontend/src/views/TransferToken.tsx`

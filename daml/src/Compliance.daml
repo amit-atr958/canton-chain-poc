@@ -1,0 +1,44 @@
+module Compliance where
+
+-- | Registry of parties permitted to hold or receive this token.
+-- ERC-3643-style permissioning layered on top of Canton's CIP-0056 token
+-- standard, which has no built-in identity/allowlist concept.
+--
+-- Daml/Canton contracts are immutable (archive + create, not mutate), so
+-- every Allow/Revoke produces a NEW contract id for the registry. Callers
+-- must look up the current active IdentityRegistry contract before each
+-- use rather than caching a contract id.
+template IdentityRegistry
+  with
+    admin     : Party
+    allowlist : [Party]
+  where
+    signatory admin
+    observer allowlist
+
+    choice IdentityRegistry_Allow : ContractId IdentityRegistry
+      with
+        party : Party
+      controller admin
+      do
+        assertMsg "party already allowlisted" (notElem party allowlist)
+        create this with allowlist = party :: allowlist
+
+    choice IdentityRegistry_Revoke : ContractId IdentityRegistry
+      with
+        party : Party
+      controller admin
+      do
+        assertMsg "party not on allowlist" (party `elem` allowlist)
+        create this with allowlist = filter (/= party) allowlist
+
+-- | Fetches the registry and asserts the given party is allowlisted.
+-- Used by Token.Issue and Transfer.TransferFactory_Transfer to gate
+-- who may receive holdings.
+assertAllowlisted : ContractId IdentityRegistry -> Party -> Party -> Update ()
+assertAllowlisted registryCid expectedAdmin party = do
+  registry <- fetch registryCid
+  assertMsg "identity registry admin mismatch" (registry.admin == expectedAdmin)
+  assertMsg
+    ("party is not allowlisted by the identity registry")
+    (party `elem` registry.allowlist)

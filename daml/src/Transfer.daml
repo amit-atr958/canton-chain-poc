@@ -1,0 +1,83 @@
+module Transfer where
+
+import Splice.Api.Token.MetadataV1 (emptyMetadata)
+import Splice.Api.Token.HoldingV1 (Holding(..), InstrumentId)
+import Splice.Api.Token.TransferInstructionV1
+
+import Compliance (IdentityRegistry, assertAllowlisted)
+import Token (TokenHolding(..))
+
+-- | Splice TransferFactory implementation for the PoC token. Every
+-- transfer completes atomically in one step (never Pending) — the
+-- TransferInstruction interface is intentionally not implemented since
+-- this factory never produces a pending instruction.
+template TokenTransferFactory
+  with
+    admin               : Party
+    identityRegistryCid : ContractId IdentityRegistry
+  where
+    signatory admin
+
+    interface instance TransferFactory for TokenTransferFactory where
+      view = TransferFactoryView with admin, meta = emptyMetadata
+
+      transferFactory_transferImpl _self TransferFactory_Transfer{expectedAdmin, transfer, extraArgs = _} = do
+        assertMsg "expectedAdmin mismatch" (expectedAdmin == admin)
+
+        now <- getTime
+        assertMsg "requestedAt must be in the past" (transfer.requestedAt <= now)
+        assertMsg "transfer expired (executeBefore in the past)" (now < transfer.executeBefore)
+
+        let Transfer{sender, receiver, amount, instrumentId, inputHoldingCids} = transfer
+        assertMsg "amount must be positive" (amount > 0.0)
+        assertMsg "inputHoldingCids must not be empty" (not (null inputHoldingCids))
+
+        assertAllowlisted identityRegistryCid admin receiver
+
+        total <- processInputs admin instrumentId sender inputHoldingCids
+        assertMsg "insufficient input holdings" (total >= amount)
+
+        receiverCid <- create TokenHolding with
+          issuer = admin
+          owner = receiver
+          amount
+          instrumentId
+          lock = None
+          meta = emptyMetadata
+
+        senderChangeCids <- if total > amount
+          then do
+            changeCid <- create TokenHolding with
+              issuer = admin
+              owner = sender
+              amount = total - amount
+              instrumentId
+              lock = None
+              meta = emptyMetadata
+            pure [toInterfaceContractId @Holding changeCid]
+          else pure []
+
+        pure TransferInstructionResult with
+          output = TransferInstructionResult_Completed with
+            receiverHoldingCids = [toInterfaceContractId @Holding receiverCid]
+          senderChangeCids
+          meta = emptyMetadata
+
+      transferFactory_publicFetchImpl _self TransferFactory_PublicFetch{expectedAdmin, actor = _} = do
+        assertMsg "expectedAdmin mismatch" (expectedAdmin == admin)
+        pure TransferFactoryView with admin, meta = emptyMetadata
+
+processInputs : Party -> InstrumentId -> Party -> [ContractId Holding] -> Update Decimal
+processInputs admin instrumentId sender holdingCids = do
+  amounts <- mapA processOne holdingCids
+  pure (sum amounts)
+  where
+    processOne holdingCid = do
+      let concreteCid = fromInterfaceContractId @TokenHolding holdingCid
+      holding <- fetch concreteCid
+      assertMsg "input holding: wrong issuer" (holding.issuer == admin)
+      assertMsg "input holding: wrong owner" (holding.owner == sender)
+      assertMsg "input holding: wrong instrument" (holding.instrumentId == instrumentId)
+      assertMsg "input holding: must not be locked" (holding.lock == None)
+      archive concreteCid
+      pure holding.amount

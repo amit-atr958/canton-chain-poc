@@ -1,2 +1,9 @@
 .worktrees/
+node_modules/
+.daml/
+*.dar
+dist/
+.env
+frontend/dist/
+localnet/cn-quickstart/
 .playwright-mcp/

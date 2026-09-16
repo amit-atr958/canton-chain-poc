@@ -20,9 +20,13 @@ Reference: [Canton Network docs — Choose Your Path](https://docs.canton.networ
 
 - **Token standard**: implement a pragmatic subset of Canton's native **CIP-0056 Token
   Standard** — the `Holding` interface (so the Wallet SDK recognizes balances natively)
-  plus `TransferFactory` / `TransferInstruction` (one-step transfer, `Completed` result
-  path only). The `Allocation` / delivery-vs-payment interfaces are out of scope — not
-  needed for a simple wallet-to-wallet transfer.
+  plus `TransferFactory` (one-step transfer, `Completed` result path only). **Correction
+  (2026-09-16):** the implementation plan's Global Constraints explicitly forbid
+  implementing the `TransferInstruction` interface itself — it's only needed for the
+  pending/accept path, which this PoC never uses — so despite this line's original
+  wording, `TokenTransferFactory` does NOT implement `TransferInstruction`; only
+  `TransferFactory`. The `Allocation` / delivery-vs-payment interfaces are out of scope
+  either way — not needed for a simple wallet-to-wallet transfer.
 - **Registry**: CIP-0056 normally requires a registry HTTP API for factory/instrument
   discovery. Out of scope for this PoC — there is a single hardcoded issuer/admin party
   and instrument, so the frontend hardcodes that config instead of querying a registry

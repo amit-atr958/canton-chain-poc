@@ -1,0 +1,43 @@
+module TokenTest where
+
+import Daml.Script
+import Splice.Api.Token.HoldingV1 (InstrumentId(..))
+import Compliance
+import Token
+
+test_mint_to_allowlisted_party : Script ()
+test_mint_to_allowlisted_party = do
+  issuer <- allocateParty "issuer"
+  alice <- allocateParty "alice"
+
+  registryCid <- submit issuer do
+    createCmd IdentityRegistry with admin = issuer, allowlist = [alice]
+
+  issuerCid <- submit issuer do
+    createCmd TokenIssuer with
+      issuer
+      instrumentId = InstrumentId with admin = issuer, id = "POC"
+
+  holdingCid <- submit issuer do
+    exerciseCmd issuerCid (Issue with to = alice, amount = 100.0, identityRegistryCid = registryCid)
+
+  Some holding <- queryContractId issuer holdingCid
+  assertMsg "owner is alice" (holding.owner == alice)
+  assertMsg "amount is 100" (holding.amount == 100.0)
+
+test_mint_to_non_allowlisted_party_fails : Script ()
+test_mint_to_non_allowlisted_party_fails = do
+  issuer <- allocateParty "issuer"
+  alice <- allocateParty "alice"
+  eve <- allocateParty "eve"
+
+  registryCid <- submit issuer do
+    createCmd IdentityRegistry with admin = issuer, allowlist = [alice]
+
+  issuerCid <- submit issuer do
+    createCmd TokenIssuer with
+      issuer
+      instrumentId = InstrumentId with admin = issuer, id = "POC"
+
+  submitMustFail issuer do
+    exerciseCmd issuerCid (Issue with to = eve, amount = 100.0, identityRegistryCid = registryCid)
