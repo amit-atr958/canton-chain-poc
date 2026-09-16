@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { getSdk } from '../sdk'
 import { POC_CONFIG } from '../pocConfig'
 import { listHoldings } from '../holdings'
+import { describeLedgerError, isComplianceRejection } from '../errors'
 import type { ConnectedWallet } from '../wallet'
 
 type Props = {
@@ -124,9 +125,9 @@ export function TransferToken({ sender, receiver, onTransferred }: Props) {
             onTransferred()
         } catch (err) {
             setError(
-                err instanceof Error
-                    ? `Transfer failed: ${err.message} (is the receiver allowlisted?)`
-                    : String(err)
+                isComplianceRejection(err)
+                    ? `Transfer failed: receiver is not allowlisted. Run: cd scripts/bootstrap && npm run allow -- ${receiver.partyId}`
+                    : `Transfer failed: ${describeLedgerError(err)}`
             )
         } finally {
             setBusy(false)
