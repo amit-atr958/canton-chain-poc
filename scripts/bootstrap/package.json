@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bootstrap": "tsx src/bootstrap.ts"
+    "bootstrap": "tsx src/bootstrap.ts",
+    "allow": "tsx src/allow-party.ts"
   },
   "dependencies": {
     "@canton-network/wallet-sdk": "^1.5.1",

@@ -65,6 +65,51 @@ deprecated alias for the same proxy.) Apply this to the freshly cloned
 `cn-quickstart` checkout before the first `docker compose up -d`, on every
 machine this is set up on — it's not part of upstream cn-quickstart yet.
 
+## Required patch #2: `add_header ... always` on the CORS headers
+
+Even with the preflight fix above, minting/transferring still failed in the
+browser with a generic `CORS policy: No 'Access-Control-Allow-Origin' header`
+error on the real POST to `/v2/interactive-submission/prepare` — not on the
+preflight. Root cause: nginx's `add_header` directive **only applies to
+2xx/3xx responses unless given the `always` parameter**; any non-2xx ledger
+response (e.g. a rejected/failing command) silently drops the CORS headers,
+and the browser reports a generic CORS failure instead of surfacing the real
+HTTP status/body. This masked real errors (including the expected
+"party is not allowlisted" compliance rejection) as CORS failures during
+Task 8 verification.
+
+**Patch required** — add `always` to every directive in
+`conf/nginx/swagger-ui/cors-headers.conf` (shared by the swagger-ui,
+canton.localhost, and json-ledger-api.localhost vhosts):
+
+```nginx
+add_header Access-Control-Allow-Origin * always;
+add_header Access-Control-Allow-Methods 'GET, POST, OPTIONS' always;
+add_header Access-Control-Allow-Headers 'Origin, Content-Type, Accept' always;
+```
+
+Restart the `nginx` container after editing this file (`docker restart
+nginx` — it's a bind-mounted file, no image rebuild needed) for the change
+to take effect.
+
+## Allowlisting a newly connected wallet before minting/transferring
+
+`scripts/bootstrap` only allowlists the admin party itself. Every
+`Connect Wallet` click in the frontend allocates a brand-new external party
+(a fresh keypair, hence a structurally new party id each time), which the
+`IdentityRegistry` allowlist rejects by default — this is the ERC-3643-style
+admin-approval compliance gate working as designed, not a bug. Before a
+freshly connected wallet can receive a mint or a transfer, allowlist it from
+`scripts/bootstrap`:
+
+    cd scripts/bootstrap
+    npm run allow -- <partyId>
+
+This also prints the new `IdentityRegistryContractId` (Allow/Revoke archives
+the old registry contract and creates a new one, since Daml contracts are
+immutable) — update `frontend/src/pocConfig.ts`'s `identityRegistryCid` to
+the printed value afterward.
+
 ## Environment notes (this sandbox)
 
 `IMAGE_TAG` is normally exported by cn-quickstart's `Makefile` (from
