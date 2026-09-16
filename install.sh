@@ -146,7 +146,7 @@ export IMAGE_TAG
 IMAGE_TAG="$(awk -F= '/^SPLICE_VERSION=/{print $2}' .env)"
 [ -n "$IMAGE_TAG" ] || die "Could not read SPLICE_VERSION from $QUICKSTART_DIR/.env"
 
-if docker compose -f docker/modules/localnet/compose.yaml --env-file .env ps --status running 2>/dev/null | grep -q canton; then
+if [ -n "$(docker ps --filter name='^canton$' --filter status=running -q)" ]; then
     log "LocalNet already running — skipping 'docker compose up'"
 else
     docker compose \
