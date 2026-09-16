@@ -6,7 +6,7 @@
 
 **Architecture:** A Daml package implements the `Holding` and `TransferFactory` interfaces from Canton's Splice token-standard, gated by a custom `IdentityRegistry` allowlist template. A React/TypeScript frontend uses `@canton-network/wallet-sdk` directly in-browser (no backend) against a standalone Splice LocalNet instance to connect wallets, mint, and transfer.
 
-**Tech Stack:** Daml 3.5.2 (LF target 2.1), `@canton-network/wallet-sdk`, React + TypeScript + Vite, Splice LocalNet (Docker Compose), Node.js 18+.
+**Tech Stack:** Daml 3.5.2 (LF target 2.1), `@canton-network/wallet-sdk`, React + TypeScript + Vite, Splice LocalNet (Docker Compose), Node.js **22+** (not 18+ — `@canton-network/core-acs-reader`'s ACS cache calls the native ES2024 `Set.prototype.union`, unavailable before Node 22; see `localnet/README.md`).
 
 **Spec:** `docs/superpowers/specs/2026-09-15-canton-token-poc-design.md`
 
