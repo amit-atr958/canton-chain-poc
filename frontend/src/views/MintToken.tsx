@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { getSdk } from '../sdk'
 import { POC_CONFIG } from '../pocConfig'
+import { describeLedgerError, isComplianceRejection } from '../errors'
 import type { ConnectedWallet } from '../wallet'
 
 type Props = {
@@ -43,9 +44,9 @@ export function MintToken({ recipient, onMinted }: Props) {
             onMinted()
         } catch (err) {
             setError(
-                err instanceof Error
-                    ? `Mint failed: ${err.message} (is the recipient allowlisted? see bootstrap step 5)`
-                    : String(err)
+                isComplianceRejection(err)
+                    ? `Mint failed: recipient is not allowlisted. Run: cd scripts/bootstrap && npm run allow -- ${recipient.partyId}`
+                    : `Mint failed: ${describeLedgerError(err)}`
             )
         } finally {
             setMinting(false)
