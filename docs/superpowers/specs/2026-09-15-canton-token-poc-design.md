@@ -10,6 +10,12 @@ A proof-of-concept demonstrating three capabilities on Canton Network:
 
 Reference: [Canton Network docs — Choose Your Path](https://docs.canton.network/appdev/get-started/choose-your-path)
 
+> **Note (2026-09-16):** a hosted, no-Docker sandbox alternative (so only Node.js/React
+> would need to be installed) was investigated and found not viable — see
+> [`2026-09-16-no-docker-hosted-sandbox-research.md`](2026-09-16-no-docker-hosted-sandbox-research.md).
+> Docker (for Splice LocalNet) and a one-time local Daml SDK install (to compile the
+> custom compliance template) remain required; this spec's architecture is unchanged.
+
 ## Scope decisions
 
 - **Token standard**: implement a pragmatic subset of Canton's native **CIP-0056 Token
