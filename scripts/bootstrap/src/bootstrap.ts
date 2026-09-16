@@ -1,18 +1,34 @@
 import { readFile, writeFile, mkdir } from 'fs/promises'
+import { execFileSync } from 'child_process'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { SDK } from '@canton-network/wallet-sdk'
 import { AuthTokenProvider } from '@canton-network/core-wallet-auth'
 import { AUTH_CONFIG, LEDGER_URL } from './config.js'
 
-// Extracted via `dpm damlc inspect-dar daml/.daml/dist/canton-token-poc-1.0.0.dar`
-// (Step 2 of the task brief) — the main package id of the canton-token-poc DAR.
-// Changed after daml/vendor/*.dar was replaced with LocalNet's own bundled
-// copies of the token-standard dependency packages (see Task 9 investigation
-// in the SDD ledger) -- rebuilding against them changes our own package hash.
-const PACKAGE_ID = 'a5b380b6ad7836ef07dc9eff7c22cdf56ece19c3154909b3957d79bb0642c1ad'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const DAR_PATH = path.join(here, '../../../daml/.daml/dist/canton-token-poc-1.0.0.dar')
+
+// Reads the package id out of the DAR itself (its MANIFEST.MF's `Main-Dalf`
+// entry is named "<name>-<version>-<packageid>.dalf") instead of hand-copying
+// it from a one-off `dpm damlc inspect-dar` run -- a hand-copied id silently
+// goes stale after every rebuild whose data-dependencies change (this
+// happened twice on this project: see the Task 9 investigation in the SDD
+// ledger) and every downstream vet/upload call then targets a package id
+// that isn't even in the DAR, failing for confusing, unrelated-looking
+// reasons. Requires `unzip` on PATH (present on any normal dev machine).
+function readPackageId(darPath: string): string {
+    const raw = execFileSync('unzip', ['-p', darPath, 'META-INF/MANIFEST.MF'], { encoding: 'utf8' })
+    // Java manifest format wraps long values across lines, each continuation
+    // starting with a single space -- unfold before matching, or a long
+    // Main-Dalf value (as here) silently fails to match on one line.
+    const manifest = raw.replace(/\r?\n /g, '')
+    const match = manifest.match(/Main-Dalf:\s*\S+-([0-9a-f]{64})\.dalf/)
+    if (!match) throw new Error(`Could not find Main-Dalf package id in ${darPath}'s MANIFEST.MF`)
+    return match[1]
+}
+
+const PACKAGE_ID = readPackageId(DAR_PATH)
 const OUTPUT_PATH = path.join(here, '../output/poc-config.json')
 
 // Extracts the created contract's id from an ACSReader.readJsContracts() result.
@@ -189,7 +205,9 @@ async function main() {
     await mkdir(path.dirname(OUTPUT_PATH), { recursive: true })
     await writeFile(OUTPUT_PATH, JSON.stringify(config, null, 2))
     console.log('Wrote', OUTPUT_PATH)
-    console.log(config)
+    // adminPrivateKey is redacted here (it's still in the written JSON file,
+    // which is gitignored) so it doesn't end up in shell scrollback or CI logs.
+    console.log({ ...config, adminPrivateKey: '<redacted, see ' + OUTPUT_PATH + '>' })
 }
 
 main().catch((err) => {

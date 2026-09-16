@@ -67,6 +67,11 @@ developer can reach without running their own validator node.
 6. **Run the frontend:** `cd frontend && npm install && npm run dev`, then
    open the printed local URL (typically `http://localhost:5173`).
 
+   If LocalNet isn't reachable at `json-ledger-api.localhost:2000` from
+   wherever the browser runs (e.g. LocalNet is on a different machine,
+   reached through an SSH tunnel), set `VITE_LEDGER_URL` before `npm run
+   dev` to override `frontend/src/sdk.ts`'s default.
+
 ## Walkthrough
 
 1. Click **Connect Sender Wallet** and **Connect Receiver Wallet**. Each
@@ -83,9 +88,10 @@ developer can reach without running their own validator node.
    npm run allow -- <receiverPartyId>
    ```
    Copy the party id shown under "connected as" in the UI. Each `allow` run
-   prints a new `IdentityRegistry` contract id (Daml contracts are
-   immutable, so `Allow`/`Revoke` archives the old one and creates a new
-   one) — you don't need to do anything with it unless step 3 below applies.
+   updates `output/poc-config.json`'s `identityRegistryCid` automatically
+   (Daml contracts are immutable, so `Allow`/`Revoke` archives the old
+   `IdentityRegistry` and creates a new one) — copy that value into
+   `frontend/src/pocConfig.ts` unless step 3 below applies instead.
 3. **If you've run `npm run allow` since the last bootstrap or since the last
    transfer setup**, `TokenTransferFactory`'s `identityRegistryCid` field
    (set once at creation, with no update choice) is now stale and any
@@ -134,3 +140,48 @@ current `scripts/bootstrap/output/poc-config.json` (bootstrap) or the
   admin-run script (`npm run allow`), matching the ERC-3643-style
   compliance model (an admin approves who may hold/receive the token), not a
   PoC omission.
+
+## Known limitations / next steps
+
+Found during the final whole-branch review (see the SDD ledger for full
+detail) — none of these block the PoC's three stated capabilities, all of
+which are implemented and live-verified, but they're the first things to
+address before extending this past PoC scope:
+
+- **Compliance checks the receiver only, never the sender.**
+  `Transfer.daml`'s `TransferFactory_Transfer` asserts the *receiver* is
+  allowlisted but never re-checks the *sender* — an ERC-3643-style model
+  (which the spec names) should gate both sides, so a revoked holder isn't
+  implicitly blocked from transferring out by anything other than losing
+  ACS visibility as a side effect. `IdentityRegistry_Revoke` also has no
+  test. Cheap fix: one more `assertAllowlisted` call plus a revoke-then-
+  transfer-fails test.
+- **`TokenTransferFactory.identityRegistryCid` is a create-time snapshot
+  with no update choice** — every `Allow`/`Revoke` after it exists makes it
+  stale (see `npm run recreate-transfer-factory` and the Walkthrough above).
+  The cleanest fix is architectural: have the frontend resolve both
+  `identityRegistryCid` and `transferFactoryCid` from the ACS at connect
+  time (the same lookup `allow-party.ts`/`recreate-transfer-factory.ts`
+  already do) instead of hand-copying them into `pocConfig.ts` — this
+  would remove the whole "config drifts out of sync" failure class. Not
+  done here because it changes the frontend's data-fetching shape against
+  an already live-verified flow; noted as the highest-value follow-up.
+- **Holdings are queried via the concrete `TokenHolding` template
+  (`holdings.ts`), not the `Holding` interface** — the design's original
+  intent (`Token.daml`'s doc comment) was for any CIP-0056-aware wallet to
+  recognize balances via the interface; that path is implemented in Daml
+  but never actually exercised by this frontend.
+- **Test coverage gap:** `IdentityRegistry_Revoke`, the exact-balance
+  transfer branch (no sender change output), and the wrong-owner input
+  rejection in `Transfer.daml`'s `processInputs` are not covered by any
+  Daml Script test, though the code paths exist and look correct on
+  inspection.
+- **No client-side validation on amount inputs** (mint/transfer) — a
+  non-numeric or invalid value reaches the ledger and surfaces as a
+  (diagnosable, post-CORS-fix) ledger error rather than a friendly
+  client-side message.
+- Error messages in `MintToken.tsx`/`TransferToken.tsx` append an
+  "is the recipient/receiver allowlisted?" hint to *every* failure, not
+  just compliance rejections — mildly misleading for e.g. insufficient-
+  balance errors. Matching on the Daml assertion text would let the UI
+  distinguish them properly.

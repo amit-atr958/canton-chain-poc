@@ -1,4 +1,4 @@
-import { readFile } from 'fs/promises'
+import { readFile, writeFile } from 'fs/promises'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { SDK } from '@canton-network/wallet-sdk'
@@ -63,12 +63,14 @@ async function main() {
         parties: [config.adminPartyId],
         filterByParty: true,
     })
+    const newRegistryCid = after[0]?.contractId
     console.log(`Allowed ${party}`)
-    console.log('New IdentityRegistry contract id:', after[0]?.contractId)
-    console.log(
-        'Update frontend/src/pocConfig.ts\'s identityRegistryCid to this value ' +
-            '(it changes on every Allow/Revoke).'
-    )
+    console.log('New IdentityRegistry contract id:', newRegistryCid)
+
+    config.identityRegistryCid = newRegistryCid
+    await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2))
+    console.log('Updated', CONFIG_PATH)
+    console.log("Update frontend/src/pocConfig.ts's identityRegistryCid to this value.")
 }
 
 main().catch((err) => {

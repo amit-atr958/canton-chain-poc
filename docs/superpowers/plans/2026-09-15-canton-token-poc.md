@@ -160,6 +160,18 @@ git commit -m "Scaffold Daml project and standalone LocalNet setup"
 
 ### Task 2: Vendor the Splice token-standard DAR dependencies
 
+> **SUPERSEDED (2026-09-16):** the from-source vendoring approach below
+> (`git clone canton-network/splice && dpm build`) is what caused the Task 9
+> `UNRESOLVED_PACKAGE_NAME` blocker — a from-source build gets a different
+> content hash than LocalNet's own bundled copy of the same package
+> name+version, and Canton refuses to vet two different packages under the
+> same (name, version). The actual, correct `scripts/vendor-token-standard.sh`
+> extracts LocalNet's own bundled DARs from the running `splice` container
+> instead — see the file itself and the Task 9 investigation in
+> `.superpowers/sdd/2026-09-15-canton-token-poc/progress.md` for the full
+> root-cause writeup. The steps below are kept for history; do not follow
+> them literally.
+
 **Files:**
 - Create: `daml/vendor/splice-api-token-metadata-v1-1.0.0.dar` (built artifact)
 - Create: `daml/vendor/splice-api-token-holding-v1-1.0.0.dar` (built artifact)
@@ -479,6 +491,13 @@ git commit -m "Add TokenHolding (Splice Holding interface) and Issue/mint"
 ---
 
 ### Task 5: Transfer module — TransferFactory (one-step transfer)
+
+> **Note (2026-09-16):** the test snippet below doesn't include the
+> `readAs [issuer]` fix the actual `TransferTest.daml` needed —
+> `TokenTransferFactory` has no observer, so a non-stakeholder sender can't
+> even see it in a Daml Script `submit` without `actAs ... <> readAs [...]`.
+> See the SDD ledger's Task 5 entry for why, and the committed test file for
+> the actual fix.
 
 **Files:**
 - Create: `daml/src/Transfer.daml`
@@ -1374,6 +1393,16 @@ git commit -m "Add mint view and holdings display"
 ---
 
 ### Task 9: Transfer Token view (including compliance rejection demo)
+
+> **Note (2026-09-16):** the sample below has `disclosedContracts: []`, but
+> the real `TransferToken.tsx` must explicitly disclose the
+> `TokenTransferFactory` contract (admin-queried `createdEventBlob`) since
+> the sender isn't a stakeholder of it — see the committed file's comments.
+> It also doesn't mention `scripts/bootstrap/src/allow-party.ts` (allowlist
+> a freshly connected wallet) or `recreate-transfer-factory.ts` (needed
+> after any `Allow`/`Revoke`, since `TokenTransferFactory.identityRegistryCid`
+> is a create-time-only field) — both exist and are documented in the root
+> `README.md`'s Walkthrough section.
 
 **Files:**
 - Create: `frontend/src/views/TransferToken.tsx`

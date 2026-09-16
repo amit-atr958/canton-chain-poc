@@ -6,6 +6,13 @@ We do NOT use cn-quickstart's own sample Daml/backend/frontend app.
 
 ## Start
 
+    git clone --depth 1 https://github.com/digital-asset/cn-quickstart.git cn-quickstart
+
+`cn-quickstart` is intentionally **not** committed to this repo (it's a
+separate upstream project vendored at setup time, listed in `.gitignore`) —
+clone it fresh into `localnet/` before the first run. Then apply the two
+nginx patches below to your fresh clone before starting LocalNet.
+
     cd cn-quickstart/quickstart
     make setup   # one-time, generates .env — does not build or start anything
     docker compose \

@@ -8,9 +8,18 @@ export function Holdings({ partyId, refreshKey }: Props) {
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
+        let stale = false
+        setError(null)
         listHoldings(partyId)
-            .then(setHoldings)
-            .catch((err) => setError(err instanceof Error ? err.message : String(err)))
+            .then((result) => {
+                if (!stale) setHoldings(result)
+            })
+            .catch((err) => {
+                if (!stale) setError(err instanceof Error ? err.message : String(err))
+            })
+        return () => {
+            stale = true
+        }
     }, [partyId, refreshKey])
 
     const total = holdings.reduce((sum, h) => sum + Number(h.amount), 0)
