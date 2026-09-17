@@ -99,6 +99,56 @@ Restart the `nginx` container after editing this file (`docker restart
 nginx` — it's a bind-mounted file, no image rebuild needed) for the change
 to take effect.
 
+## Optional: reaching the frontend/LocalNet from another machine (LAN access)
+
+By default LocalNet's ports only bind to `127.0.0.1` (see `HOST_BIND_IP`
+below), and the frontend defaults to `http://json-ledger-api.localhost:2000`
+— both fine for local dev, or for a remote machine reached through an SSH
+tunnel (`ssh -L 2000:localhost:2000 -L <frontend-port>:localhost:<frontend-port> ...`,
+which makes `localhost` on your machine transparently reach the remote
+ports). If instead you want a browser on a **different machine** to reach
+this dev server **directly** over the network (no tunnel — e.g.
+`http://<server-ip>:5173/`), two more things are required, not just opening
+the ports:
+
+1. **The Web Crypto API needs a secure context.** `sdk.keys.generate()`
+   (used by Connect Wallet) calls `crypto.subtle`, which browsers only
+   expose on `https://` origins or `http://localhost` specifically — plain
+   `http://<ip>:<port>` fails with `Cannot read properties of undefined
+   (reading 'importKey')`, which looks like an app bug but is a browser
+   security restriction. Fix: serve the frontend over HTTPS.
+   `./scripts/generate-dev-cert.sh <your-server-ip>` generates a
+   self-signed cert into `frontend/.certs/`, which `frontend/vite.config.ts`
+   picks up automatically on the next `npm run dev` (or `./start.sh`) — no
+   further config needed. Your browser will show a one-time
+   self-signed-certificate warning per browser; that's expected, click
+   through it (e.g. Chrome's "Advanced → Proceed").
+2. **Once the frontend is HTTPS, the ledger API proxy must be too** —
+   browsers block a HTTPS page from fetching plain HTTP ("mixed content").
+   Patch `conf/nginx/app-user.conf`: add `ssl` to every
+   `listen ${APP_USER_UI_PORT}...;` directive on that file's five server
+   blocks, and add `ssl_certificate`/`ssl_certificate_key` lines pointing at
+   the same cert (copy `frontend/.certs/{cert,key}.pem` into
+   `conf/nginx/dev-certs/`, and add
+   `${LOCALNET_DIR}/conf/nginx/dev-certs:/etc/nginx/dev-certs` to nginx's
+   volumes in `compose.yaml`, since nginx can't read a path outside its
+   `localnet/` config tree otherwise). Also add your server's IP as an
+   additional `server_name` on the `json-ledger-api.localhost` block (nginx
+   matches vhosts by the `Host` header, which is the IP:port you typed, not
+   `json-ledger-api.localhost`, when reached this way).
+3. Set `HOST_BIND_IP=0.0.0.0` before `docker compose up` (or `up -d nginx`
+   to just recreate that one container) so the now-HTTPS ports actually
+   bind on all interfaces, not just loopback.
+4. Start the frontend with
+   `VITE_LEDGER_URL=https://<your-server-ip>:2000 npm run dev -- --host 0.0.0.0`
+   (`sdk.ts` reads `VITE_LEDGER_URL` to override its `localhost`-based
+   default — see `README.md`).
+
+This is a one-time setup per machine that needs LAN access (the generated
+cert and the nginx/compose patches are all outside git — `frontend/.certs/`
+is gitignored, and `localnet/cn-quickstart/` always is). It's not something
+`install.sh`/`start.sh` do by default, since most setups don't need it.
+
 ## Allowlisting a newly connected wallet before minting/transferring
 
 `scripts/bootstrap` only allowlists the admin party itself. Every

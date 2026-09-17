@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Self-signed dev cert (see scripts/generate-dev-cert.sh) -- machine-specific
+.certs/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
