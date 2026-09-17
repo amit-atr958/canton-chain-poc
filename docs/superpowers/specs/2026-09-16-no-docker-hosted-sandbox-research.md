@@ -81,3 +81,38 @@ A separate query (via Canton's own AI docs assistant) reported: "Yes, TestNet is
 - Getting *onto* TestNet is **strictly heavier than DevNet, not lighter**: it still requires running your own validator node (Docker/Kubernetes — same as DevNet/MainNet), plus **GSF Tokenomics Committee approval**, applied for via `sync.global`, and that approval is explicitly gated on the applicant being **"within two weeks of production readiness"** — i.e. TestNet access is a pre-launch checkpoint for real applications, not a scratch space for exploratory PoCs [corroborated by multiple independent secondary summaries of the Canton docs' deployment-progression content; treat the "two weeks of production readiness" detail as secondary-sourced, not yet confirmed against the primary docs page verbatim].
 - On top of the committee approval: IP allowlisting (2–7 day turnaround from a sponsoring SV), an onboarding secret, and the whole allowlist resets every 3–6 months — the same operational churn described in §3 above, now with an additional approval gate layered on.
 - **Net effect: unchanged.** "TestNet is available" answers "does the network exist," not "can a Node/React developer reach it without Docker or an approval process." It cannot — TestNet access requires more process than DevNet, and DevNet already requires a self-hosted validator. The bottom line in this file stands.
+
+## Addendum (2026-09-17): DevNet Scan API — real endpoints, empirically tested, currently blocked
+
+A follow-up claim (from the user, sourced elsewhere) was that Canton's **Scan API** — a read-only network-state API (validator lists, token metadata, DSO info; intended per Splice's own docs for building "network analytic apps, block explorer apps, or financial accounting integrations" [Scan APIs — Splice docs](https://docs.dev.sync.global/app_dev/scan_api/index.html)) — has publicly-reachable DevNet endpoints, unlike the Ledger API (still IP-whitelisted per §2/§3 above). Two specific URLs were given:
+
+- `https://scan.sv.dev.global.canton.network.digitalasset.com`
+- `https://scan.sv-1.dev.global.canton.network.sync.global`
+
+**Verified real, not fabricated.** Both resolve via DNS and complete a valid TLS handshake with a genuine Let's Encrypt certificate: `scan.sv.dev.global.canton.network.digitalasset.com`'s cert has `subject: CN=dev.network.canton.global`, SAN matching `*.sv.dev.global.canton.network.digitalasset.com`, issued by Let's Encrypt (`CN=YR1`), valid 2026-07-26 to 2026-10-24 — checked directly via `curl -v`, not asserted from a search result. Both gateways identify as `server: istio-envoy` (a Kubernetes/service-mesh ingress, consistent with an SV's own hosted infrastructure), and the digitalasset.com one sits behind `via: 1.1 google` (GCP-hosted).
+
+**Empirically, every path tried returns 403, from this network's current outbound IP — tested 2026-09-17:**
+
+```
+GET https://scan.sv.dev.global.canton.network.digitalasset.com/api/scan/v0/splice-instance-names
+  -> HTTP/2 403, body: "RBAC: access denied"
+GET https://scan.sv.dev.global.canton.network.digitalasset.com/api/scan/v0/dso
+GET https://scan.sv.dev.global.canton.network.digitalasset.com/v0/dso
+GET https://scan.sv.dev.global.canton.network.digitalasset.com/api/scan/v0/state
+GET https://scan.sv.dev.global.canton.network.digitalasset.com/api/scan/v0/synchronizers
+GET https://scan.sv.dev.global.canton.network.digitalasset.com/api/scan/v0/domains
+  -> all HTTP 403
+
+GET https://scan.sv-1.dev.global.canton.network.sync.global/api/scan/v0/dso
+GET https://scan.sv-1.dev.global.canton.network.sync.global/v0/dso
+  -> both HTTP 403 (generic nginx "403 Forbidden" page, no RBAC-specific message)
+```
+
+`/v0/dso` is specifically significant: a Splice release-notes/docs snippet found via search states *"the SV app /v0/dso is currently public, but will require authorization as SV operator similar to most other SV app endpoints, with the public /v0/dso endpoint in the scan app available if you need to fetch DSO info"* — i.e. this is documented as the ONE endpoint meant to be open without SV-operator credentials. It returned 403 on both hosts regardless.
+
+**Three possible explanations, none confirmed — do not treat any of these as settled:**
+1. DevNet-wide IP allowlisting (already established in §2/§3 above for the Ledger API) may apply at the network edge for *all* traffic to an SV's infrastructure, including nominally-public Scan paths — i.e. "public" may mean "public once your IP is already allowlisted for DevNet," not "open to any internet host."
+2. These two specific SV operators (Digital Asset's own `sv.dev` node, and a `sv-1` node under `sync.global`) may have configured stricter access than the documented default — Scan's public/private posture could be a per-operator gateway choice, not a network-wide guarantee.
+3. The docs snippet's own wording ("is *currently* public, but *will* require authorization") reads as an in-progress lock-down; by 2026-09-17 that transition may already be complete, making the "public" claim stale.
+
+**Bottom line:** the endpoints are genuine DevNet infrastructure, not invented — but as of 2026-09-17, from this environment's network path, they are **not** openly reachable, including the specific path Splice's own documentation calls out as the public one. This does not overturn §2/§3's conclusion (no open-signup path to Canton Network exists for this PoC); it narrows the earlier claim "no public read access at all exists anywhere on DevNet" to "at least these two SV's Scan gateways are not openly reachable from here, for reasons not yet confirmed." Retest from an already-allowlisted network/VPN, or from a different egress IP, before concluding either way.
