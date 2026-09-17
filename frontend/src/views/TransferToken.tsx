@@ -35,6 +35,13 @@ export function TransferToken({ sender, receiver, onTransferred }: Props) {
     const [error, setError] = useState<string | null>(null)
 
     async function handleTransfer() {
+        const senderPrivateKey = sender.privateKey
+        if (!senderPrivateKey) {
+            setError(
+                "Transfer failed: sender is connected via Console Wallet, which can't co-sign this PoC's custom TransferFactory choice. Connect the sender with a local key instead."
+            )
+            return
+        }
         setBusy(true)
         setError(null)
         try {
@@ -119,7 +126,7 @@ export function TransferToken({ sender, receiver, onTransferred }: Props) {
                     ],
                     disclosedContracts,
                 })
-                .sign(sender.privateKey)
+                .sign(senderPrivateKey)
                 .execute({ partyId: sender.partyId })
 
             onTransferred()
@@ -137,9 +144,14 @@ export function TransferToken({ sender, receiver, onTransferred }: Props) {
     return (
         <div>
             <input value={amount} onChange={(e) => setAmount(e.target.value)} />
-            <button onClick={handleTransfer} disabled={busy}>
+            <button onClick={handleTransfer} disabled={busy || !sender.privateKey}>
                 {busy ? 'Transferring…' : `Transfer to ${receiver.partyId.slice(0, 12)}…`}
             </button>
+            {!sender.privateKey && (
+                <p style={{ color: '#666' }}>
+                    Sender is connected via Console Wallet and can't sign transfers in this PoC.
+                </p>
+            )}
             {error && <p style={{ color: 'red' }}>{error}</p>}
         </div>
     )

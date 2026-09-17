@@ -128,6 +128,11 @@ attempt to install Docker on those).
    allocates a brand-new external party (a fresh keypair) — the party id is
    structurally different every time you click, even for the "same" browser
    session.
+   - Alternatively, click **Connect with Console Wallet** if you have the
+     [Console Wallet extension](https://chromewebstore.google.com/detail/console-wallet/lpnfhpbpmlobjlgkdmnjieeihjmihhjd)
+     installed — this connects a real, self-custodial party via
+     `@console-wallet/dapp-sdk` (see "Console Wallet support" below for what
+     it can and can't do here).
 2. **Allowlist both wallets before minting or transferring.**
    `scripts/bootstrap` only allowlists the admin party itself — every freshly
    connected wallet needs an explicit admin approval, which is the
@@ -160,6 +165,22 @@ attempt to install Docker on those).
    connect a third, never-allowlisted one) and attempt a mint or transfer to
    it — the UI surfaces a readable "is the recipient/receiver allowlisted?"
    error rather than a silent failure or a raw ledger error.
+
+### Console Wallet support
+
+Clicking **Connect with Console Wallet** genuinely connects to the
+[Console Wallet browser extension](https://chromewebstore.google.com/detail/console-wallet/lpnfhpbpmlobjlgkdmnjieeihjmihhjd)
+via `@console-wallet/dapp-sdk` (`frontend/src/consoleWallet.ts`) — it's not a
+mock. A connected Console Wallet party can be a **Mint recipient** or a
+**Transfer receiver**, since both of those are signed by someone else (the
+admin, or the sender). It can't be the **sender** of a Transfer here: the
+SDK's signing/submission methods (`submitCommands`, `signBatch`,
+`prepareExecute`, `ledgerApi`) are typed to a fixed DevNet/TestNet/MainNet
+enum with no LocalNet option, and only cover sending Canton Coin/CIP-56
+coins — there's no method for a dApp to hand the extension an arbitrary
+prepared Daml transaction (like our custom `TransferFactory_Transfer`
+choice) to co-sign. The UI disables the Transfer button and explains this
+when the connected sender has no local private key.
 
 ### No block-explorer link (yet) — why
 
