@@ -3,6 +3,7 @@ import { ConnectWallet } from './views/ConnectWallet'
 import { MintToken } from './views/MintToken'
 import { Holdings } from './views/Holdings'
 import { TransferToken } from './views/TransferToken'
+import { Explorer } from './views/Explorer'
 import type { ConnectedWallet } from './wallet'
 
 export function App() {
@@ -16,7 +17,9 @@ export function App() {
             <section>
                 <h2>1. Connect Wallets</h2>
                 <ConnectWallet label="Sender" wallet={walletA} onConnected={setWalletA} />
+                {walletA && <Explorer partyId={walletA.partyId} label="Sender" />}
                 <ConnectWallet label="Receiver" wallet={walletB} onConnected={setWalletB} />
+                {walletB && <Explorer partyId={walletB.partyId} label="Receiver" />}
             </section>
 
             {walletA && (

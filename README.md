@@ -160,6 +160,16 @@ attempt to install Docker on those).
    connect a third, never-allowlisted one) and attempt a mint or transfer to
    it — the UI surfaces a readable "is the recipient/receiver allowlisted?"
    error rather than a silent failure or a raw ledger error.
+7. Click **"Explore &lt;Sender/Receiver&gt;'s contracts"** under either
+   connected wallet to see every contract currently visible to that party
+   (its `TokenHolding`s and the `IdentityRegistry` it's allowlisted on) —
+   click a row to expand its full contract id, template id, and arguments as
+   JSON. Canton is privacy-preserving (a party only ever sees contracts it's
+   a stakeholder of), so this per-wallet view — not a public multi-party
+   block explorer like Etherscan, which has no equivalent on Canton — is the
+   most a wallet can honestly show. See `frontend/src/views/Explorer.tsx`'s
+   comments for why it explicitly lists template ids rather than querying
+   "everything" (the SDK has no wildcard-filter option).
 
 ### Config drifts out of sync — how to tell
 

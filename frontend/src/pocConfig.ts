@@ -4,11 +4,11 @@
 // a LocalNet restart with a fresh volume).
 export const POC_CONFIG = {
     packageId: 'a5b380b6ad7836ef07dc9eff7c22cdf56ece19c3154909b3957d79bb0642c1ad',
-    adminPartyId: 'poc-admin::122069bcbd58c9436d206929351a4e7a7adb297a9a41187a5f6b811de09096d25441',
-    adminPublicKey: '6nl8PRzEw6GMdDzvR3EgtzSq7zlRU4f9rMdJlLAapPk=',
-    adminPrivateKey: 'n/IssxPX6O/Zt8omRc95cZInAwV7GddXYrEzdVVmPDvqeXw9HMTDoYx0PO9HcSC3NKrvOVFTh/2sx0mUsBqk+Q==',
-    instrumentId: { admin: 'poc-admin::122069bcbd58c9436d206929351a4e7a7adb297a9a41187a5f6b811de09096d25441', id: 'POC' },
-    identityRegistryCid: '0037b94b35cca440abec258cccf192a07455ab8f7e19d607dca75e1afef4e39ff9ca121220aef9ea5a53877f7727aefc125c04d1f707b27a4c661d9cef2b20c4a18815c03a',
-    issuerCid: '00b5facb82b3889e028d47ccb3f70cd3b242cfe16ad7570efcf425931d44ba738bca121220e638e1782bbcefb93e019e8abc46e43534078df8f50a70b88e38212204d8dfa4',
-    transferFactoryCid: '00a828c8aa34eac0270f4ed38978fe282a1f66b6c9ed178f67fa6014fb9d6f6a8dca1212204389b55e24bb2115da8d9ebf74471be6d9a45f8447e79049ed013e9a3211c18a',
+    adminPartyId: 'poc-admin::1220ee3ce8a0ec50174cb8e06bfb5d2ea63fdda519c03d3ff4162ea2daf9c6e3ca63',
+    adminPublicKey: '671uJmIm5PhOE/Jf0CRSepDsAzntM4K1RUEhQvBSa1M=',
+    adminPrivateKey: 'fEON5hUChaHxiGrc44RDtE8/C4NZuWXTXw+m2BjtyW7rvW4mYibk+E4T8l/QJFJ6kOwDOe0zgrVFQSFC8FJrUw==',
+    instrumentId: { admin: 'poc-admin::1220ee3ce8a0ec50174cb8e06bfb5d2ea63fdda519c03d3ff4162ea2daf9c6e3ca63', id: 'POC' },
+    identityRegistryCid: '00e41a06539c5be6cd063279f820377ef38cdcc01f090471b21c4f4ace9742eb3fca12122092192bf18977fb20934fe313cab624a97cc0710816cc6356825f856bed5afeef',
+    issuerCid: '0026bb359189f7f3b6c54c793e395c54f3d9aad3e43efc471da1f80fcf19e34381ca121220c7d38122046892b38465646763da19f7ed760bf2d66e0290636d5598b4bd5731',
+    transferFactoryCid: '00b9b9cfc5a826947165ed1aec494b539e0fb5f57752e47ea4222b9b537b774e43ca121220abc1fd9a47619c8d75a0a55fd8ca6f29e0dd2bfc41fe19d9c79ec069efa65d35',
 } as const
