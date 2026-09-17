@@ -160,16 +160,18 @@ attempt to install Docker on those).
    connect a third, never-allowlisted one) and attempt a mint or transfer to
    it — the UI surfaces a readable "is the recipient/receiver allowlisted?"
    error rather than a silent failure or a raw ledger error.
-7. Click **"Explore &lt;Sender/Receiver&gt;'s contracts"** under either
-   connected wallet to see every contract currently visible to that party
-   (its `TokenHolding`s and the `IdentityRegistry` it's allowlisted on) —
-   click a row to expand its full contract id, template id, and arguments as
-   JSON. Canton is privacy-preserving (a party only ever sees contracts it's
-   a stakeholder of), so this per-wallet view — not a public multi-party
-   block explorer like Etherscan, which has no equivalent on Canton — is the
-   most a wallet can honestly show. See `frontend/src/views/Explorer.tsx`'s
-   comments for why it explicitly lists template ids rather than querying
-   "everything" (the SDK has no wildcard-filter option).
+
+### No block-explorer link (yet) — why
+
+A "view on explorer" link for a transaction only makes sense once this app
+runs against a real Canton network — public explorers like
+[cantonscan.com](https://www.cantonscan.com) (`/update/{updateId}`) or
+[ccview.io](https://ccview.io) (mainnet) / [testnet.ccview.io](https://testnet.ccview.io)
+only index the real Global Synchronizer (TestNet/MainNet), not this PoC's
+private, disposable LocalNet — a LocalNet `updateId` (returned by
+`sdk.ledger....execute()` as `{ updateId, completionOffset }`) would never
+resolve on any of them. Revisit this once/if the app is deployed to a real
+network — see `PRODUCTION.md`'s network-progression section.
 
 ### Config drifts out of sync — how to tell
 
